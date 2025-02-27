@@ -8,8 +8,8 @@
 #     print(f"{code}: {name}")
 from gtts import gTTS  
 
-text = "Sannu, yaya kake?"  # Hello, how are you?  
-language = "ha"  # Hausa language code  
+text = "Elimu ni ufunguo wa maisha, na bidii huleta mafanikio."   
+language = "sw"  # swahilli language code  
 
 tts = gTTS(text=text, lang=language, slow=False)
-tts.save("hello_hausa.mp3")  # Save the audio file  
+tts.save("swahilli.mp3")   
