@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenVision - Assistive Technology for Visually Impaired</title>
+  <meta name="description" content="Real-time navigation and object detection for visually impaired individuals">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Feather Icons (lightweight alternative to Lucide) -->
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+</head>
+<body>
+  <!-- Welcome Screen -->
+  <div id="welcome-screen" class="screen active">
+    <div class="welcome-container">
+      <div class="logo-container">
+        <i data-feather="eye" class="logo-icon"></i>
+      </div>
+      <h1>OpenVision</h1>
+      <p>Real-time navigation and object detection assistant for visually impaired individuals</p>
+      
+      <div class="features-grid">
+        <div class="feature-item">
+          <i data-feather="volume-2"></i>
+          <span>Voice Guidance</span>
+        </div>
+        <div class="feature-item">
+          <i data-feather="mic"></i>
+          <span>Voice Commands</span>
+        </div>
+        <div class="feature-item">
+          <i data-feather="map-pin"></i>
+          <span>Location Awareness</span>
+        </div>
+        <div class="feature-item">
+          <i data-feather="alert-triangle"></i>
+          <span>Emergency Assistance</span>
+        </div>
+      </div>
+      
+      <button id="start-button" class="primary-button">Start OpenVision</button>
+      <p class="hint-text">Tap anywhere on screen or use voice commands to control the app</p>
+    </div>
+  </div>
+
+  <!-- Main App Screen -->
+  <div id="main-screen" class="screen">
+    <!-- Camera View -->
+    <div id="camera-container">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="detection-canvas"></canvas>
+      
+      <!-- Loading Overlay -->
+      <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading object detection model...</p>
+      </div>
+      
+      <!-- Camera Switch Button -->
+      <button id="camera-switch" class="icon-button">
+        <i data-feather="camera"></i>
+      </button>
+      
+      <!-- Offline Mode Indicator -->
+      <div id="offline-indicator">
+        <i data-feather="alert-circle"></i>
+        <span>Offline Mode</span>
+      </div>
+    </div>
+    
+    <!-- Detection Results -->
+    <div id="detection-results">
+      <h2>Detected Objects</h2>
+      <ul id="objects-list"></ul>
+    </div>
+    
+    <!-- Accessibility Controls -->
+    <div id="accessibility-controls">
+      <div class="controls-grid">
+        <button id="toggle-speech" class="control-button" aria-label="Toggle speech">
+          <i data-feather="volume-2"></i>
+        </button>
+        <button id="toggle-voice-commands" class="control-button" aria-label="Toggle voice commands">
+          <i data-feather="mic"></i>
+        </button>
+        <button id="battery-status" class="control-button" aria-label="Battery status">
+          <i data-feather="battery"></i>
+        </button>
+        <button id="location-status" class="control-button" aria-label="Location">
+          <i data-feather="map-pin"></i>
+        </button>
+        <button id="emergency-button" class="control-button emergency" aria-label="Emergency assistance">
+          <i data-feather="alert-triangle"></i>
+        </button>
+        <button id="toggle-contrast" class="control-button" aria-label="Toggle high contrast">
+          <i data-feather="eye"></i>
+        </button>
+        <button id="settings-button" class="control-button wide" aria-label="Settings">
+          <i data-feather="settings"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Emergency Panel -->
+  <div id="emergency-panel" class="panel">
+    <div class="panel-content">
+      <div class="panel-header">
+        <h2>Emergency Assistance</h2>
+        <button class="close-button" data-panel="emergency-panel">
+          <i data-feather="x"></i>
+        </button>
+      </div>
+      
+      <div id="emergency-message" class="message-box hidden"></div>
+      
+      <div class="action-buttons">
+        <button id="share-location-button" class="primary-button">
+          <i data-feather="share-2"></i>
+          <span>Share My Location</span>
+        </button>
+      </div>
+      
+      <h3>Emergency Contacts</h3>
+      <ul id="emergency-contacts-list" class="contacts-list"></ul>
+    </div>
+  </div>
+  
+  <!-- Settings Panel -->
+  <div id="settings-panel" class="panel">
+    <div class="panel-content">
+      <div class="panel-header">
+        <h2>Settings</h2>
+        <div class="header-buttons">
+          <button id="save-settings" class="icon-button success">
+            <i data-feather="save"></i>
+          </button>
+          <button class="close-button" data-panel="settings-panel">
+            <i data-feather="x"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="settings-sections">
+        <!-- Speech Settings -->
+        <section>
+          <h3>Speech Settings</h3>
+          
+          <div class="setting-item">
+            <label for="speech-rate">
+              Speech Rate: <span id="speech-rate-value">1.0</span>
+            </label>
+            <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1.0">
+          </div>
+          
+          <div class="setting-item">
+            <label for="speech-volume">
+              Volume: <span id="speech-volume-value">1.0</span>
+            </label>
+            <input type="range" id="speech-volume" min="0" max="1" step="0.1" value="1.0">
+          </div>
+          
+          <div class="setting-item">
+            <label for="speech-language">Language</label>
+            <select id="speech-language"></select>
+          </div>
+        </section>
+        
+        <!-- Detection Settings -->
+        <section>
+          <h3>Detection Settings</h3>
+          
+          <div class="setting-item">
+            <label for="detection-threshold">
+              Detection Threshold: <span id="detection-threshold-value">60%</span>
+            </label>
+            <input type="range" id="detection-threshold" min="0.3" max="0.9" step="0.05" value="0.6">
+            <p class="setting-hint">Higher values mean more accurate but fewer detections</p>
+          </div>
+        </section>
+        
+        <!-- Accessibility Settings -->
+        <section>
+          <h3>Accessibility Settings</h3>
+          
+          <div class="setting-item checkbox">
+            <input type="checkbox" id="haptic-feedback" checked>
+            <label for="haptic-feedback">Haptic Feedback</label>
+          </div>
+          
+          <div class="setting-item checkbox">
+            <input type="checkbox" id="high-contrast">
+            <label for="high-contrast">High Contrast Mode</label>
+          </div>
+          
+          <div class="setting-item checkbox">
+            <input type="checkbox" id="battery-alerts" checked>
+            <label for="battery-alerts">Battery Level Alerts</label>
+          </div>
+        </section>
+        
+        <!-- Emergency Contacts -->
+        <section>
+          <h3>Emergency Contacts</h3>
+          
+          <div id="contacts-container"></div>
+          
+          <div class="add-contact-form">
+            <div class="form-grid">
+              <input type="text" id="new-contact-name" placeholder="Name">
+              <input type="tel" id="new-contact-phone" placeholder="Phone">
+            </div>
+            <button id="add-contact-button" class="primary-button">
+              <i data-feather="plus"></i>
+              <span>Add Contact</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils/speechUtils.js"></script>
+  <script src="js/utils/detectionUtils.js"></script>
+  <script src="js/utils/accessibilityUtils.js"></script>
+  <script src="js/utils/locationUtils.js"></script>
+  <script src="js/utils/batteryUtils.js"></script>
+  <script src="js/utils/voiceCommandUtils.js"></script>
+  <script src="js/utils/storageUtils.js"></script>
+  <script src="js/components/cameraView.js"></script>
+  <script src="js/components/detectionResults.js"></script>
+  <script src="js/components/emergencyPanel.js"></script>
+  <script src="js/components/settingsPanel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
